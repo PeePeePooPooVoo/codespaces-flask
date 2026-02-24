@@ -1,19 +1,90 @@
+<!DOCTYPE html>
+<html>
 <head>
-    <title>{{ title }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
-
+    <title>Task Manager</title>
+    <style>
+        body { font-family: Arial; width: 500px; margin: 50px auto; }
+        li { margin: 10px 0; }
+        .completed { text-decoration: line-through; color: gray; }
+    </style>
+</head>
 <body>
-    <div class="App">
-        <header class="App-header">
-            <img src="{{ url_for('static', filename='Octocat.png') }}" class="App-logo" alt="logo" />
-            <p>
-                GitHub Codespaces <span class="heart">♥️</span> Flask
-            </p>
-            <p class="small">
-                Edit <code>templates/index.html</code> and refresh to see your changes!
-            </p>
-        </header>
-    </div>
-</body>
 
+<h2>Task Manager</h2>
+
+<input id="taskInput" placeholder="New task">
+<button onclick="addTask()">Add</button>
+
+<br><br>
+
+<button onclick="filterTasks('all')">All</button>
+<button onclick="filterTasks('active')">Active</button>
+<button onclick="filterTasks('completed')">Completed</button>
+
+<ul id="taskList"></ul>
+
+<script>
+let currentFilter = "all";
+
+async function loadTasks() {
+    const res = await fetch("/tasks");
+    const tasks = await res.json();
+
+    const list = document.getElementById("taskList");
+    list.innerHTML = "";
+
+    tasks
+        .filter(task => {
+            if (currentFilter === "active") return !task.completed;
+            if (currentFilter === "completed") return task.completed;
+            return true;
+        })
+        .forEach(task => {
+            const li = document.createElement("li");
+
+            li.innerHTML = `
+                <span class="${task.completed ? 'completed' : ''}">
+                    ${task.title}
+                </span>
+                <button onclick="toggleTask(${task.id})">✔</button>
+                <button onclick="deleteTask(${task.id})">❌</button>
+            `;
+
+            list.appendChild(li);
+        });
+}
+
+async function addTask() {
+    const input = document.getElementById("taskInput");
+    const title = input.value;
+
+    await fetch("/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title })
+    });
+
+    input.value = "";
+    loadTasks();
+}
+
+async function toggleTask(id) {
+    await fetch(`/tasks/${id}`, { method: "PUT" });
+    loadTasks();
+}
+
+async function deleteTask(id) {
+    await fetch(`/tasks/${id}`, { method: "DELETE" });
+    loadTasks();
+}
+
+function filterTasks(filter) {
+    currentFilter = filter;
+    loadTasks();
+}
+
+loadTasks();
+</script>
+
+</body>
 </html>
