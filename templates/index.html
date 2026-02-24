@@ -1,90 +1,56 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Task Manager</title>
-    <style>
-        body { font-family: Arial; width: 500px; margin: 50px auto; }
-        li { margin: 10px 0; }
-        .completed { text-decoration: line-through; color: gray; }
-    </style>
+<meta charset="UTF-8">
+<title>Mini Task Manager</title>
+<style>
+body { font-family: Arial; margin: 40px; }
+.completed { text-decoration: line-through; color: gray; }
+button { margin-left: 5px; }
+</style>
 </head>
 <body>
-
-<h2>Task Manager</h2>
-
-<input id="taskInput" placeholder="New task">
+<h1>Mini Task Manager</h1>
+<input id="new-task" placeholder="New task">
 <button onclick="addTask()">Add</button>
-
-<br><br>
-
-<button onclick="filterTasks('all')">All</button>
-<button onclick="filterTasks('active')">Active</button>
-<button onclick="filterTasks('completed')">Completed</button>
-
-<ul id="taskList"></ul>
+<ul id="task-list"></ul>
 
 <script>
-let currentFilter = "all";
-
-async function loadTasks() {
-    const res = await fetch("/tasks");
+async function fetchTasks() {
+    const res = await fetch('/tasks');
     const tasks = await res.json();
-
-    const list = document.getElementById("taskList");
-    list.innerHTML = "";
-
-    tasks
-        .filter(task => {
-            if (currentFilter === "active") return !task.completed;
-            if (currentFilter === "completed") return task.completed;
-            return true;
-        })
-        .forEach(task => {
-            const li = document.createElement("li");
-
-            li.innerHTML = `
-                <span class="${task.completed ? 'completed' : ''}">
-                    ${task.title}
-                </span>
-                <button onclick="toggleTask(${task.id})">✔</button>
-                <button onclick="deleteTask(${task.id})">❌</button>
-            `;
-
-            list.appendChild(li);
-        });
+    const list = document.getElementById('task-list');
+    list.innerHTML = '';
+    tasks.forEach(task => {
+        const li = document.createElement('li');
+        li.textContent = task.title;
+        if(task.completed) li.classList.add('completed');
+        li.onclick = async () => { await toggleTask(task.id); fetchTasks(); };
+        const del = document.createElement('button');
+        del.textContent = 'Delete';
+        del.onclick = async (e) => { e.stopPropagation(); await deleteTask(task.id); fetchTasks(); };
+        li.appendChild(del);
+        list.appendChild(li);
+    });
 }
 
 async function addTask() {
-    const input = document.getElementById("taskInput");
-    const title = input.value;
-
-    await fetch("/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title })
-    });
-
-    input.value = "";
-    loadTasks();
+    const input = document.getElementById('new-task');
+    if(!input.value.trim()) return;
+    await fetch('/tasks', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({title: input.value}) });
+    input.value = '';
+    fetchTasks();
 }
 
 async function toggleTask(id) {
-    await fetch(`/tasks/${id}`, { method: "PUT" });
-    loadTasks();
+    await fetch(`/tasks/${id}`, { method: 'PUT' });
 }
 
 async function deleteTask(id) {
-    await fetch(`/tasks/${id}`, { method: "DELETE" });
-    loadTasks();
+    await fetch(`/tasks/${id}`, { method: 'DELETE' });
 }
 
-function filterTasks(filter) {
-    currentFilter = filter;
-    loadTasks();
-}
-
-loadTasks();
+fetchTasks();
 </script>
-
 </body>
 </html>
